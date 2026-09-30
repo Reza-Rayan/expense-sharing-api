@@ -51,7 +51,7 @@ export function renderLanding(info: LandingInfo): string {
     </div>
     <div class="links">
       <a href="/docs">API Documentation<small>Swagger UI</small></a>
-      <a href="/api/health">Health Check<small>GET /api/health</small></a>
+      <a href="/api/health">Health Check<small>GET /health</small></a>
     </div>
   </main>
 </body>

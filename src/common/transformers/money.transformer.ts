@@ -1,11 +1,14 @@
 import { ValueTransformer } from 'typeorm';
 
-export const moneyTransformer: ValueTransformer = {
-  // app -> database: dollars to cents
-  to: (value: number | null | undefined) =>
-    value === null || value === undefined ? value : Math.round(value * 100),
+export const dollarsToCents = (dollars: number): number =>
+  Math.round(dollars * 100);
 
-  // database -> app: cents to dollars
+export const centsToDollars = (cents: number): number => cents / 100;
+
+export const moneyTransformer: ValueTransformer = {
+  to: (value: number | null | undefined) =>
+    value === null || value === undefined ? value : dollarsToCents(value),
+
   from: (value: number | null | undefined) =>
-    value === null || value === undefined ? value : value / 100,
+    value === null || value === undefined ? value : centsToDollars(value),
 };

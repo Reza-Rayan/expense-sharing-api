@@ -7,6 +7,7 @@ import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './users/users.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { BalancesModule } from './balances/balances.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ExpensesModule } from './expenses/expenses.module';
     DatabaseModule,
     UsersModule,
     ExpensesModule,
+    BalancesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
