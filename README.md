@@ -1,99 +1,271 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Expense Sharing App
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A small full-stack expense-sharing application inspired by Splitwise. Users record who paid for whom, and the app shows the full expense history together with the **net balance** between every pair of users.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- **Live app:** <!-- TODO: add deployed frontend URL -->
+- **API docs (Swagger):** <!-- TODO: add deployed backend URL -->/docs
+- **API base URL:** <!-- TODO: add deployed backend URL -->/api
 
-## Description
+## Table of Contents
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [How it works](#how-it-works)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Getting started (backend)](#getting-started-backend)
+- [Getting started (frontend)](#getting-started-frontend)
+- [API reference](#api-reference)
+- [Design decisions](#design-decisions)
+- [Manual test scenario](#manual-test-scenario)
+- [Deployment](#deployment)
 
-## Project setup
+## How it works
 
-```bash
-$ pnpm install
+An expense is a single **directional transaction**:
+
+```
+paidBy → paidFor → amount
+Alice  → Bob     → $50     means: Bob owes Alice $50
 ```
 
-## Compile and run the project
+Users are seeded beforehand (no authentication, registration, or user creation). The UI has one page with two views:
 
-```bash
-# development
-$ pnpm run start
+- **Expenses:** who paid, who the expense was for, amount, description, and date, newest first.
+- **Balances:** the current net balance between users, e.g. `Bob owes Alice $30`.
 
-# watch mode
-$ pnpm run start:dev
+Transactions between the same two users are **netted**, regardless of direction:
 
-# production mode
-$ pnpm run start:prod
+| Transaction | Effect |
+|---|---|
+| Alice → Bob → $50 | Bob owes Alice $50 |
+| Bob → Alice → $20 | Bob owes Alice $30 (netted) |
+| Bob → Alice → $30 | Settled, the pair disappears from balances |
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | NestJS, TypeScript |
+| Database | PostgreSQL via TypeORM |
+| Validation | class-validator / class-transformer |
+| Configuration | `@nestjs/config` with validated environment variables |
+| API docs | Swagger (`@nestjs/swagger`) |
+| Frontend | <!-- TODO: fill in frontend stack --> |
+
+## Project structure
+
+```
+.
+├── back-end/
+│   └── src/
+│       ├── common/          Shared building blocks (abstract entity, money transformer, DTOs)
+│       ├── config/          Typed configuration, env validation, Swagger setup
+│       ├── database/        TypeORM config/module, seeder and seed data
+│       ├── users/           Users module (list / get user)
+│       ├── expenses/        Expenses module (create / list with pagination)
+│       ├── balances/        Balances module (net balances between users)
+│       ├── app.module.ts
+│       └── main.ts
+└── front-end/               <!-- TODO: confirm folder name -->
 ```
 
-## Run tests
+Each feature is a self-contained NestJS module (module, controller, service, DTOs, entities). Modules depend on each other only through exported services.
+
+## Getting started (backend)
+
+### Prerequisites
+
+- Node.js 20 or newer
+- [pnpm](https://pnpm.io/)
+- A running PostgreSQL instance
+
+### 1. Create the database
+
+```sql
+CREATE DATABASE expense_sharing;
+```
+
+### 2. Install dependencies
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+cd back-end
+pnpm install
 ```
+
+### 3. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `NODE_ENV` | no | `development` | `development`, `production` or `test` |
+| `PORT` | no | `5000` | HTTP port |
+| `DATABASE_HOST` | yes | | PostgreSQL host |
+| `DATABASE_PORT` | no | `5432` | PostgreSQL port |
+| `DATABASE_NAME` | yes | | Database name |
+| `DATABASE_USERNAME` | yes | | Database user |
+| `DATABASE_PASSWORD` | no | empty | Database password |
+
+Environment variables are validated at startup. If something is missing or invalid, the app fails immediately with a clear message instead of failing later at runtime.
+
+### 4. Run the app
+
+```bash
+pnpm start:dev
+```
+
+In development the schema is created and synchronized automatically from the entities, and SQL queries are logged.
+
+### 5. Seed the database
+
+The seeder inserts 8 users and 17 sample expenses (including opposite-direction transactions, a fully settled pair, and decimal amounts):
+
+```bash
+pnpm seed
+```
+
+The seeder is idempotent: running it again does not duplicate users, and expenses are only inserted when the table is empty. To wipe the expenses and re-seed them:
+
+```bash
+pnpm seed:fresh
+```
+
+The seed data lives in `back-end/src/database/data/seed.json`, so it can be edited without touching code.
+
+### Useful URLs
+
+| URL | Description |
+|---|---|
+| `http://localhost:5000/` | Landing page |
+| `http://localhost:5000/docs` | Swagger UI |
+| `http://localhost:5000/api/health` | Health check (also verifies the database connection) |
+
+### Scripts
+
+| Script | Description |
+|---|---|
+| `pnpm start:dev` | Run in watch mode |
+| `pnpm build` | Compile to `dist/` |
+| `pnpm start:prod` | Run the compiled app |
+| `pnpm seed` | Seed users and sample expenses |
+| `pnpm seed:fresh` | Remove expenses, then seed again (blocked in production) |
+| `pnpm seed:prod` | Run the compiled seeder (`dist/`) |
+
+## Getting started (frontend)
+
+<!-- TODO: add frontend setup and run instructions -->
+
+## API reference
+
+All endpoints are prefixed with `/api`. Interactive documentation is available at `/docs`.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/users` | List all users |
+| `GET` | `/api/users/:id` | Get a single user |
+| `GET` | `/api/expenses?page=1&limit=20` | List expenses, newest first (paginated) |
+| `POST` | `/api/expenses` | Record a new expense |
+| `GET` | `/api/balances` | Net balances between users |
+| `GET` | `/api/health` | API and database health |
+
+### Create an expense
+
+`POST /api/expenses`
+
+```json
+{
+  "paidById": 1,
+  "paidForId": 2,
+  "amount": 50,
+  "description": "Dinner"
+}
+```
+
+| Field | Rules |
+|---|---|
+| `paidById` | integer, must be an existing user (the person who paid) |
+| `paidForId` | integer, must be an existing user and different from `paidById` (the person who owes) |
+| `amount` | positive number in dollars, at most 2 decimal places, at most 1,000,000 |
+| `description` | non-empty string after trimming, at most 255 characters |
+
+Unknown fields are rejected. Responses:
+
+- `201` the created expense, including the `paidBy` and `paidFor` users
+- `400` validation error, or `paidById` equals `paidForId`
+- `404` one of the users does not exist
+
+### List expenses
+
+`GET /api/expenses?page=1&limit=20` (`limit` max is 100)
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "amount": 50,
+      "description": "Dinner",
+      "createdAt": "2026-09-30T12:00:00.000Z",
+      "paidById": 1,
+      "paidForId": 2,
+      "paidBy": { "id": 1, "name": "Alice", "createdAt": "..." },
+      "paidFor": { "id": 2, "name": "Bob", "createdAt": "..." }
+    }
+  ],
+  "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+}
+```
+
+### Net balances
+
+`GET /api/balances`
+
+```json
+[
+  {
+    "debtor": { "id": 2, "name": "Bob" },
+    "creditor": { "id": 1, "name": "Alice" },
+    "amount": 30
+  }
+]
+```
+
+Read it as: **`debtor` owes `creditor` `amount`**. `amount` is always positive and settled pairs are omitted. Results are sorted by amount (largest first).
+
+## Design decisions
+
+**Balances are computed, not stored.** Expenses are the single source of truth. A stored balance column would have to be updated in the same transaction as every new expense, and any bug or partial failure would leave the two out of sync. Instead, `GET /api/balances` aggregates the expenses on demand. For the scale of this app that is fast, and it can never drift from the data.
+
+**Netting happens in the database.** Each transaction is mapped to an ordered pair using `LEAST` / `GREATEST` on the user IDs, so `Alice → Bob` and `Bob → Alice` fall into the same `GROUP BY` bucket. A `CASE` expression signs each amount by direction, and the sum tells who owes whom. Only the (small) number of user pairs is sent to the application, which then resolves user names through `UsersService` and builds the response.
+
+**Money is stored as integer cents.** Floating point cannot represent values like `0.1 + 0.2` exactly, and errors accumulate. Amounts are stored as `integer` cents and converted by a TypeORM `ValueTransformer`, so the API and the rest of the code work with plain dollar amounts. Input is limited to 2 decimal places and a maximum amount, so rounding never loses information.
+
+**Business rules are enforced in two layers.** DTO validation gives clean `400` errors, and database constraints are the last line of defence: `amount > 0`, `paidById <> paidForId`, and foreign keys with `ON DELETE RESTRICT` so financial history cannot be deleted by removing a user. Indexes exist on both foreign keys.
+
+**No caching.** The balances query is a cheap aggregate over an indexed table, and a cache would add invalidation logic, coupling between modules, and stale-data risk for no measurable gain.
+
+**Pairwise netting, not debt simplification.** Balances show the net amount between each pair of users, as specified. Global debt simplification (turning `A→B→C` into `A→C`) is a different problem and was intentionally left out.
+
+**Environment-aware database behaviour.** `synchronize` and SQL logging are enabled only in development. In any other environment auto-sync is disabled and migrations from `src/database/migrations` run on startup.
+
+**Seeding is a separate script.** The seeder is not part of application startup. It creates the same Nest application context (same config, same DI) without starting the HTTP server, runs inside a single transaction, and is idempotent.
+
+## Manual test scenario
+
+After `pnpm seed:fresh`, `GET /api/balances` returns 12 balances (the pair Hadi / Nik-Aein is fully settled and therefore absent). Or start from an empty database and try this in Swagger:
+
+| Step | Request | `GET /api/balances` afterwards |
+|---|---|---|
+| 1 | Alice → Bob → 50 | Bob owes Alice 50 |
+| 2 | Bob → Alice → 20 | Bob owes Alice 30 |
+| 3 | Bob → Alice → 30 | empty (settled) |
+| 4 | Charlie → Alice → 12.5 | Alice owes Charlie 12.5 |
+
+Error cases to try: same user on both sides (`400`), unknown user ID (`404`), amount `0`, negative, or `10.999` (`400`), an extra field such as `"id": 5` (`400`), whitespace-only description (`400`).
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+<!-- TODO: describe the deployment (platform, database, environment variables, migration/seed steps) once deployed -->
