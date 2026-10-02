@@ -2,7 +2,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm config set ignore-engines true && pnpm install --frozen-lockfile
+RUN npm install -g pnpm && PNPM_IGNORE_ENGINES=true pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm build
